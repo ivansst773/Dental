@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda Semanal Dental 🦷</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 20px;
+      background-image: url('assets/img/fondo-dental.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+    h1 { color: #2c3e50; }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .day-column {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .day-column h2 { font-size: 16px; margin-bottom: 10px; }
+    .appointment {
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      color: #fff;
+    }
+    .confirmada { background-color: #2ecc71; }
+    .pendiente { background-color: #f1c40f; }
+    .noshow { background-color: #e74c3c; }
+    .form-section { margin-top: 40px; background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; }
+    input, select { padding: 6px; margin: 5px; width: 200px; }
+    button {
+      padding: 8px 12px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Agenda Semanal Dental 🦷</h1>
+
+  <div class="calendar" id="calendar"></div>
+
+  <div class="form-section">
+    <h2>Agregar nueva cita</h2>
+    <form id="cita-form">
+      <input type="text" id="paciente" placeholder="Paciente" required>
+      <input type="text" id="trabajo" placeholder="Trabajo" required>
+      <input type="text" id="aseguradora" placeholder="Aseguradora">
+      <input type="datetime-local" id="fecha" required>
+      <select id="estado">
+        <option value="confirmada">Confirmada</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="noshow">No Show</option>
+      </select>
+      <button type="submit">Agregar</button>
+    </form>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/agenda';
+
+    async function cargarAgenda() {
+      const res = await fetch(API_URL);
+      const citas = await res.json();
+      const calendar = document.getElementById('calendar');
+      calendar.innerHTML = '';
+
+      const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const agendaPorDia = {};
+
+      dias.forEach(dia => agendaPorDia[dia] = []);
+
+      citas.forEach(cita => {
+        const fecha = new Date(cita.fecha);
+        const diaSemana = fecha.getDay();
+        const diaNombre = dias[diaSemana - 1];
+        if (diaNombre) {
+          agendaPorDia[diaNombre].push(cita);
+        }
+      });
+
+      dias.forEach(dia => {
+        const columna = document.createElement('div');
+        columna.className = 'day-column';
+        columna.innerHTML = `<h2>${dia}</h2>`;
+        agendaPorDia[dia].forEach(cita => {
+          const div = document.createElement('div');
+          div.className = `appointment ${cita.estado || 'pendiente'}`;
+          div.innerHTML = `<strong>${cita.paciente}</strong><br>${cita.trabajo}<br>${cita.fecha}<br>${cita.aseguradora || ''}`;
+          columna.appendChild(div);
+        });
+        calendar.appendChild(columna);
+      });
+    }
+
+    document.getElementById('cita-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nuevaCita = {
+        paciente: document.getElementById('paciente').value,
+        trabajo: document.getElementById('trabajo').value,
+        fecha: document.getElementById('fecha').value,
+        aseguradora: document.getElementById('aseguradora').value,
+        estado: document.getElementById('estado').value
+      };
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevaCita)
+      });
+      cargarAgenda();
+      e.target.reset();
+    });
+
+    cargarAgenda();
+  </script>
+</body>
+</html>
